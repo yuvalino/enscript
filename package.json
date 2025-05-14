@@ -1,0 +1,41 @@
+{
+    "name": "enscript",
+    "displayName": "EnScript",
+    "description": "VSCode extension for Bohemia's EnScript language with LSP support",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.70.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "main": "./client/out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "enscript",
+                "aliases": [
+                    "EnScript"
+                ],
+                "extensions": [
+                    ".c"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "enscript",
+                "scopeName": "source.enscript",
+                "path": "./syntaxes/enscript.tmLanguage.json"
+            }
+        ]
+    },
+    "scripts": {
+        "install": "cd server && npm install && cd ../client && npm install",
+        "compile": "tsc -b client server"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.0"
+    }
+}
