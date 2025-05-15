@@ -60,8 +60,7 @@ documents.onDidClose(e => purgeDocument(e.document.uri));
 /* ░░ LANGUAGE FEATURES ░░ */
 connection.onDefinition(({ textDocument, position }) => {
     const word = getWordAtPosition(textDocument.uri, position);
-    const locs = symbolTable.get(word);
-    return locs ? locs[0] : null;
+    return symbolTable.get(word) ?? null;   // array or null
 });
 
 connection.onWorkspaceSymbol(({ query }) => {
