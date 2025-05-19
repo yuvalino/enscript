@@ -1,10 +1,5 @@
+server/out
+out/
 node_modules/
+*.tsbuildinfo
 package-lock.json
-client/package-lock.json
-client/tsconfig.tsbuildinfo
-client/node_modules/
-client/out/
-server/package-lock.json
-server/tsconfig.tsbuildinfo
-server/node_modules/
-server/out/

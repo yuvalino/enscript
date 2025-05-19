@@ -1,24 +1,30 @@
 {
-    "name": "enscript",
-    "displayName": "EnScript",
-    "description": "VSCode extension for Bohemia's EnScript language with LSP support",
-    "version": "1.0.0",
+    "name": "enscript-lsp",
+    "displayName": "Enscript for DayZ",
+    "description": "Enforce/Enscript language support and DayZ game‑specific tooling.",
+    "version": "0.1.0",
+    "publisher": "yourname",
     "engines": {
-        "vscode": "^1.70.0"
+        "vscode": "^1.90.0"
     },
     "categories": [
         "Programming Languages"
     ],
-    "main": "./client/out/extension.js",
+    "activationEvents": [
+        "onLanguage:enscript"
+    ],
+    "main": "./out/extension.js",
     "contributes": {
         "languages": [
             {
                 "id": "enscript",
                 "aliases": [
-                    "EnScript"
+                    "Enscript",
+                    "enscript"
                 ],
                 "extensions": [
-                    ".c"
+                    ".c",
+                    ".cproj"
                 ],
                 "configuration": "./language-configuration.json"
             }
@@ -29,13 +35,35 @@
                 "scopeName": "source.enscript",
                 "path": "./syntaxes/enscript.tmLanguage.json"
             }
+        ],
+        "commands": [
+            {
+                "command": "enscript.restartServer",
+                "title": "Restart Enscript Language Server"
+            }
         ]
     },
     "scripts": {
-        "install": "cd server && npm install && cd ../client && npm install",
-        "compile": "tsc -b client server"
+        "compile": "tsc -p . && tsc -p server",
+        "watch": "tsc -w -p . & tsc -w -p server",
+        "lint": "echo \"(lint placeholder)\"",
+        "test": "jest",
+        "clean": "rimraf out server/out",
+        "package": "npm run compile && vsce package",
+        "publish": "npm run compile && vsce publish"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.0",
+        "vscode-languageserver": "^9.0.0",
+        "vscode-languageserver-textdocument": "^1.0.5"
     },
     "devDependencies": {
-        "typescript": "^5.3.0"
+        "@types/jest": "^29.5.14",
+        "@types/node": "^22.15.18",
+        "@types/vscode": "^1.100.0",
+        "jest": "^29.7.0",
+        "rimraf": "^5.0.5",
+        "ts-jest": "^29.3.4",
+        "typescript": "^5.4.5"
     }
 }
