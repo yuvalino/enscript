@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range, Location, SymbolInformation, SymbolKind, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase } from '../ast/parser';
+import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode } from '../ast/parser';
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
@@ -43,6 +43,46 @@ export function getTokenAtPosition(text: string, offset: number): Token | null {
     }
 
     return null;
+}
+
+function formatDeclaration(node: SymbolNodeBase): string {
+    let fmt: string | null = null;
+    switch (node.kind) {
+        case 'FunctionDecl': {
+            const _node = node as FunctionDeclNode;
+            fmt = `${_node.returnType} ${_node.name}(${_node.parameters?.join(', ') ?? ''})`;
+            break;
+        }
+
+        case 'VarDecl': {
+            const _node = node as VarDeclNode;
+            fmt = `${_node.type} ${_node.name}`;
+            break;
+        }
+
+        case 'ClassDecl': {
+            const _node = node as ClassDeclNode;
+            fmt = `class ${_node.name}` + (_node.base ? ` : ${_node.base}` : '');
+            break;
+        }
+
+        case 'EnumDecl': {
+            const _node = node as ClassDeclNode;
+            fmt = `enum ${_node.name}`;
+            break;
+        }
+
+        case 'Typedef': {
+            const _node = node as TypedefNode;
+            fmt = `typedef ${_node.oldType} ${_node.name}`;
+            break;
+        }
+    }
+
+    if (fmt)
+        return '```enscript\n' + fmt + '\n```'
+
+    return `(Unknown ${node.kind}) ${node.name}`;
 }
 
 /** Singleton façade that lazily analyses files and answers LSP queries. */
@@ -176,15 +216,11 @@ export class Analyzer {
     }
 
     getHover(doc: TextDocument, _pos: Position): string | null {
-        const symbols = this.resolveSymbolAtPosition(doc, _pos);
+        const symbols = this.resolveDefinitions(doc, _pos);
         if (symbols.length === 0) return null;
 
         return symbols
-            .map((s) =>
-                s.type
-                    ? `${s.type} ${s.name}()`
-                    : `${s.kind} ${s.name}`
-            )
+            .map((s) => formatDeclaration(s))
             .join('\n\n');
     }
 
