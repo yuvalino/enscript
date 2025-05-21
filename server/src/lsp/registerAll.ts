@@ -7,13 +7,15 @@ import { registerReferences } from './handlers/references';
 import { registerRename } from './handlers/rename';
 import { registerWorkspaceSymbol } from './handlers/workspaceSymbol';
 import { registerDiagnostics } from './handlers/diagnostics';
+import { registerDocuments } from './handlers/documents';
 
 export function registerAllHandlers(conn: Connection, docs: TextDocuments<TextDocument>): void {
-  registerCompletion(conn, docs);
-  registerDefinition(conn, docs);
-  registerHover(conn, docs);
-  registerReferences(conn, docs);
-  registerRename(conn, docs);
-  registerWorkspaceSymbol(conn, docs);
-  registerDiagnostics(conn, docs);
+    registerCompletion(conn, docs);
+    registerDefinition(conn, docs);
+    registerHover(conn, docs);
+    registerReferences(conn, docs);
+    registerRename(conn, docs);
+    registerWorkspaceSymbol(conn, docs);
+    registerDiagnostics(conn, docs);
+    registerDocuments(conn, docs);
 }

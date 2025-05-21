@@ -97,8 +97,11 @@ export class Analyzer {
 
     private ensure(doc: TextDocument): File {
         // 1 · cache hit
-        if (this.docCache.has(doc.uri)) {
-            return this.docCache.get(doc.uri)!;
+        const currVersion = doc.version;
+        const cachedFile = this.docCache.get(doc.uri);
+
+        if (cachedFile && cachedFile.version === currVersion) {
+            return cachedFile;
         }
 
         try {
@@ -131,7 +134,7 @@ export class Analyzer {
             }
 
             // 4 · return an empty stub so callers can continue
-            return { body: [] };
+            return { body: [], version: 0 };
         }
     }
 

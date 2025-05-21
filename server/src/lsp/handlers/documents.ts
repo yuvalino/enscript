@@ -8,7 +8,7 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Analyzer } from '../../analysis/project/graph';
 
-export function registerDiagnostics(conn: Connection, docs: TextDocuments<TextDocument>): void {
+export function registerDocuments(conn: Connection, docs: TextDocuments<TextDocument>): void {
     const analyser = Analyzer.instance();
 
     const validate = (change: TextDocumentChangeEvent<TextDocument>) => {

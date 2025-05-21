@@ -94,6 +94,7 @@ export interface VarDeclNode extends SymbolNodeBase {
 
 export interface File {
     body: SymbolNodeBase[]
+    version: number
 }
 
 // parse entry point
@@ -163,7 +164,8 @@ export function parse(
 
     // ast root
     const file: File = {
-        body: []
+        body: [],
+        version: doc.version
     };
 
     // main loop
