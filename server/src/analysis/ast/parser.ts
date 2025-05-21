@@ -11,6 +11,7 @@
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
+    Position,
     Connection,
     Diagnostic,
     DiagnosticSeverity
@@ -53,14 +54,15 @@ export type NodeKind =
 
 export interface NodeBase {
     kind: NodeKind;
-    start: number;
-    end: number;
+    uri: string;
+    start: Position;
+    end: Position;
 }
 
 export interface SymbolNodeBase extends NodeBase {
     name: string;
-    nameStart: number;
-    nameEnd: number;
+    nameStart: Position;
+    nameEnd: Position;
     modifiers: string[];
 }
 
@@ -173,7 +175,7 @@ export function parse(
         skipTrivia();
         if (eof()) break;
 
-        const node = parseDecl(0); // depth = 0
+        const node = parseDecl(doc, 0); // depth = 0
         if (node) file.body.push(node);
     }
 
@@ -190,7 +192,7 @@ export function parse(
     return file;
 
     // declaration parser (recursive)
-    function parseDecl(depth: number): SymbolNodeBase | null {
+    function parseDecl(doc: TextDocument, depth: number): SymbolNodeBase | null {
         skipTrivia();
 
         // modifiers are allowed on functions, variables, class members
@@ -211,7 +213,7 @@ export function parse(
             expect('{');
             const members: SymbolNodeBase[] = [];
             while (peek().value !== '}' && !eof()) {
-                const m = parseDecl(depth + 1);
+                const m = parseDecl(doc, depth + 1);
                 if (m) members.push(m);
             }
             expect('}');
@@ -219,14 +221,15 @@ export function parse(
 
             return {
                 kind: 'ClassDecl',
+                uri: doc.uri,
                 name: nameTok.value,
-                nameStart: nameTok.start,
-                nameEnd: nameTok.end,
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
                 base: base,
                 modifiers: mods,
                 members: members,
-                start: t.start,
-                end: peek().end
+                start: doc.positionAt(t.start),
+                end: doc.positionAt(peek().end)
             } as ClassDeclNode;
         }
 
@@ -245,12 +248,13 @@ export function parse(
             if (peek().value === ';') next();
             return {
                 kind: 'EnumDecl',
+                uri: doc.uri,
                 name: nameTok.value,
-                nameStart: nameTok.start,
-                nameEnd: nameTok.end,
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
                 members: enumerators,
-                start: t.start,
-                end: peek().end
+                start: doc.positionAt(t.start),
+                end: doc.positionAt(peek().end)
             } as EnumDeclNode;
         }
 
@@ -262,12 +266,13 @@ export function parse(
             if (peek().value === ';') next();
             return {
                 kind: 'Typedef',
+                uri: doc.uri,
                 oldType: oldTy,
                 name: nameTok.value,
-                nameStart: nameTok.start,
-                nameEnd: nameTok.end,
-                start: t.start,
-                end: peek().end
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
+                start: doc.positionAt(t.start),
+                end: doc.positionAt(peek().end)
             } as TypedefNode;
         }
 
@@ -308,15 +313,16 @@ export function parse(
 
             return {
                 kind: 'FunctionDecl',
+                uri: doc.uri,
                 name: nameTok.value,
-                nameStart: nameTok.start,
-                nameEnd: nameTok.end,
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
                 returnType: typeTok.value,
                 parameters: params,
                 locals: locals,
                 modifiers: mods,
-                start: typeTok.start,
-                end: peek().end
+                start: doc.positionAt(typeTok.start),
+                end: doc.positionAt(peek().end)
             } as FunctionDeclNode;
         }
 
@@ -324,13 +330,14 @@ export function parse(
         expect(';');
         return {
             kind: 'VarDecl',
+            uri: doc.uri,
             name: nameTok.value,
-            nameStart: nameTok.start,
-            nameEnd: nameTok.end,
+            nameStart: doc.positionAt(nameTok.start),
+            nameEnd: doc.positionAt(nameTok.end),
             type: typeTok.value,
             modifiers: mods,
-            start: typeTok.start,
-            end: peek().end
+            start: doc.positionAt(typeTok.start),
+            end: doc.positionAt(peek().end)
         } as VarDeclNode;
     }
 

@@ -140,7 +140,6 @@ export class Analyzer {
 
     resolveSymbolAtPosition(doc: TextDocument, pos: Position) {
         const ast = this.ensure(doc);
-        const offset = doc.offsetAt(pos);
 
         const result: SymbolEntry[] = [];
 
@@ -162,7 +161,7 @@ export class Analyzer {
 
         // Try to find closest match
         for (const c of candidates) {
-            if (offset >= c.start && offset <= c.end) {
+            if (pos >= c.start && pos <= c.end) {
                 result.push({
                     name: c.name,
                     kind: c.kind,
@@ -170,8 +169,8 @@ export class Analyzer {
                     location: {
                         uri: doc.uri,
                         range: {
-                            start: doc.positionAt(c.start),
-                            end: doc.positionAt(c.end)
+                            start: c.start,
+                            end: c.end
                         }
                     },
                     scope: c.scope
@@ -242,12 +241,12 @@ export class Analyzer {
     getWorkspaceSymbols(): SymbolInformation[] {
         const res: SymbolInformation[] = [];
         for (const [uri, ast] of this.docCache) {
-            for (const node of (ast.body as any[])) {
+            for (const node of ast.body) {
                 if (!node.name) continue;
                 res.push({
                     name: node.name,
                     kind: SymbolKind.Class,
-                    location: { uri, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } } }
+                    location: { uri, range: { start: node.nameStart, end: node.nameEnd } }
                 });
             }
         }

@@ -20,8 +20,8 @@ export function registerDefinition(conn: Connection, docs: TextDocuments<TextDoc
         const locations: Location[] = symbols.map(symbol => ({
             uri: doc.uri,
             range: {
-                start: doc.positionAt(symbol.nameStart ?? symbol.start),
-                end: doc.positionAt(symbol.nameEnd ?? symbol.end)
+                start: symbol.nameStart,
+                end:symbol.nameEnd,
             }
         }));
 
