@@ -144,38 +144,35 @@ export class Analyzer {
         return ast.body.filter((n: any) => n.name);
     }
 
-    resolveDefinition(doc: TextDocument, _pos: Position): SymbolNodeBase | null {
+    resolveDefinitions(doc: TextDocument, _pos: Position): SymbolNodeBase[] {
         const ast = this.ensure(doc);
         const offset = doc.offsetAt(_pos);
 
-        // Find the identifier under cursor
-        const target = getTokenAtPosition(doc.getText(), offset);
-        if (target?.kind != TokenKind.Identifier)
-            return null;
+        const token = getTokenAtPosition(doc.getText(), offset);
+        if (!token || token.kind !== TokenKind.Identifier) return [];
 
-        const name = target.value;
+        const name = token.value;
+        console.info(`resolveDefinitions: "${name}"`);
 
-        console.info(`resolveDefinition: "${name}"`);
-
-        // Search top-level and class members
-        const all: SymbolNodeBase[] = [];
+        const matches: SymbolNodeBase[] = [];
 
         for (const node of ast.body) {
-            all.push(node);
+            // top-level match
+            if ('name' in node && node.name === name) {
+                matches.push(node as SymbolNodeBase);
+            }
 
-            if (node.kind === 'ClassDecl' && Array.isArray((node as any).members)) {
-                for (const member of (node as ClassDeclNode).members) {
-                    all.push(member);
+            // class member match
+            if (node.kind === 'ClassDecl') {
+                for (const member of (node as ClassDeclNode).members || []) {
+                    if ('name' in member && member.name === name) {
+                        matches.push(member as SymbolNodeBase);
+                    }
                 }
             }
         }
 
-        // Return the first exact name match
-        for (const sym of all) {
-            if (sym.name === name) return sym;
-        }
-
-        return null;
+        return matches;
     }
 
     getHover(doc: TextDocument, _pos: Position): string | null {

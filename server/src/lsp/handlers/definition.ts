@@ -13,17 +13,18 @@ export function registerDefinition(conn: Connection, docs: TextDocuments<TextDoc
         const doc = docs.get(params.textDocument.uri);
         if (!doc) return [];
 
-        const analyser = Analyzer.instance();
-        const symbol = analyser.resolveDefinition(doc, params.position) as any;
-        if (!symbol) return [];
+        const analyzer = Analyzer.instance();
+        const symbols = analyzer.resolveDefinitions(doc, params.position);
+        if (symbols.length === 0) return [];
 
-        const location: Location = {
+        const locations: Location[] = symbols.map(symbol => ({
             uri: doc.uri,
             range: {
-                start: doc.positionAt(symbol.nameStart),
-                end: doc.positionAt(symbol.nameEnd)
+                start: doc.positionAt(symbol.nameStart ?? symbol.start),
+                end: doc.positionAt(symbol.nameEnd ?? symbol.end)
             }
-        };
-        return location;
+        }));
+
+        return locations;
     });
 }
