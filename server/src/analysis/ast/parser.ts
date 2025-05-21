@@ -17,44 +17,6 @@ import {
 } from 'vscode-languageserver';
 import { Token, TokenKind } from '../lexer/token';
 import { lex } from '../lexer/lexer';
-import { FileNode, NodeBase } from './nodes';
-
-/* export a richer node set */
-export interface ClassDeclNode extends NodeBase {
-    kind: 'ClassDecl';
-    name: string;
-    base?: string;
-    modifiers: string[];
-    members: NodeBase[];
-}
-
-export interface EnumDeclNode extends NodeBase {
-    kind: 'EnumDecl';
-    name: string;
-    enumerators: string[];
-}
-
-export interface FunctionDeclNode extends NodeBase {
-    kind: 'FunctionDecl';
-    name: string;
-    returnType: string;
-    modifiers: string[];
-    parameters: string[];
-    locals: string[];
-}
-
-export interface VarDeclNode extends NodeBase {
-    kind: 'VarDecl';
-    name: string;
-    type: string;
-    modifiers: string[];
-}
-
-export type RichNode =
-    | ClassDeclNode
-    | EnumDeclNode
-    | FunctionDeclNode
-    | VarDeclNode;
 
 export class ParseError extends Error {
     constructor(
@@ -79,15 +41,66 @@ const primitives = new Set([
     'vector'
 ]);
 
-/* helpers */
 const isModifier = (t: Token) =>
     t.kind === TokenKind.Keyword && modifiers.has(t.value);
 
-/* ─────────────────────── parse entry point ──────────────────────── */
+export type NodeKind =
+  | 'ClassDecl'
+  | 'EnumDecl'
+  | 'Typedef'
+  | 'FunctionDecl'
+  | 'VarDecl';
+
+export interface NodeBase {
+    kind: NodeKind;
+    start: number;
+    end: number;
+}
+
+export interface SymbolNodeBase extends NodeBase {
+    name: string;
+    nameStart: number;
+    nameEnd: number;
+    modifiers: string[];
+}
+
+export interface ClassDeclNode extends SymbolNodeBase {
+    kind: 'ClassDecl';
+    base?: string;
+    members: SymbolNodeBase[];
+}
+
+export interface EnumDeclNode extends SymbolNodeBase {
+    kind: 'EnumDecl';
+    members: string[];
+}
+
+export interface TypedefNode extends SymbolNodeBase {
+    kind: 'Typedef';
+    oldType: string;
+}
+
+export interface FunctionDeclNode extends SymbolNodeBase {
+    kind: 'FunctionDecl';
+    parameters: string[];
+    returnType: string;
+    locals: string[];
+}
+
+export interface VarDeclNode extends SymbolNodeBase {
+    kind: 'VarDecl';
+    type: string;
+}
+
+export interface File {
+    body: SymbolNodeBase[]
+}
+
+// parse entry point
 export function parse(
     doc: TextDocument,
     conn?: Connection            // optional – pass from index.ts to auto-log
-): FileNode {
+): File {
     const toks = lex(doc.getText());
     let pos = 0;
 
@@ -149,10 +162,7 @@ export function parse(
     };
 
     // ast root
-    const file: FileNode = {
-        kind: 'File',
-        start: 0,
-        end: doc.getText().length,
+    const file: File = {
         body: []
     };
 
@@ -178,7 +188,7 @@ export function parse(
     return file;
 
     // declaration parser (recursive)
-    function parseDecl(depth: number): RichNode | null {
+    function parseDecl(depth: number): SymbolNodeBase | null {
         skipTrivia();
 
         // modifiers are allowed on functions, variables, class members
@@ -190,14 +200,14 @@ export function parse(
         // class
         if (t.value === 'class') {
             next();
-            const name = expectIdentifier();
+            const nameTok = expectIdentifier();
             let base: string | undefined;
             if (peek().value === ':' || peek().value === 'extends') {
                 next();
-                base = expectIdentifier();
+                base = expectIdentifier().value;
             }
             expect('{');
-            const members: NodeBase[] = [];
+            const members: SymbolNodeBase[] = [];
             while (peek().value !== '}' && !eof()) {
                 const m = parseDecl(depth + 1);
                 if (m) members.push(m);
@@ -207,10 +217,12 @@ export function parse(
 
             return {
                 kind: 'ClassDecl',
-                name,
-                base,
+                name: nameTok.value,
+                nameStart: nameTok.start,
+                nameEnd: nameTok.end,
+                base: base,
                 modifiers: mods,
-                members,
+                members: members,
                 start: t.start,
                 end: peek().end
             } as ClassDeclNode;
@@ -219,7 +231,7 @@ export function parse(
         // enum
         if (t.value === 'enum') {
             next();
-            const name = expectIdentifier();
+            const nameTok = expectIdentifier();
             expect('{');
             const enumerators: string[] = [];
             while (peek().value !== '}' && !eof()) {
@@ -231,8 +243,10 @@ export function parse(
             if (peek().value === ';') next();
             return {
                 kind: 'EnumDecl',
-                name,
-                enumerators,
+                name: nameTok.value,
+                nameStart: nameTok.start,
+                nameEnd: nameTok.end,
+                members: enumerators,
                 start: t.start,
                 end: peek().end
             } as EnumDeclNode;
@@ -241,16 +255,18 @@ export function parse(
         // typedef
         if (t.value === 'typedef') {
             next();
-            const oldTy = expectIdentifier();
-            const newTy = expectIdentifier();
+            const oldTy = expectIdentifier().value;
+            const nameTok = expectIdentifier();
             if (peek().value === ';') next();
             return {
                 kind: 'Typedef',
                 oldType: oldTy,
-                newName: newTy,
+                name: nameTok.value,
+                nameStart: nameTok.start,
+                nameEnd: nameTok.end,
                 start: t.start,
                 end: peek().end
-            } as any;
+            } as TypedefNode;
         }
 
         // function OR variable
@@ -264,18 +280,38 @@ export function parse(
             /* body? */
             if (peek().value === '{') {
                 next();
-                locals = scanLocals();
-                consumeBalanced('{', '}');
+                let depth = 1;
+                while (depth > 0 && !eof()) {
+                    const t = next();
+                    if (t.value === '{') depth++;
+                    else if (t.value === '}') depth--;
+                    else if (
+                        depth === 1 &&
+                        t.kind === TokenKind.Identifier &&
+                        peek().kind === TokenKind.Identifier
+                    ) {
+                        // pattern:  <type> <name>
+                        const maybeName = peek();
+                        if (
+                            toks[pos + 1] &&
+                            toks[pos + 1].value === ';'
+                        ) {
+                            locals.push(maybeName.value);
+                        }
+                    }
+                }
             } else {
                 expect(';');
             }
 
             return {
                 kind: 'FunctionDecl',
-                name: nameTok,
+                name: nameTok.value,
+                nameStart: nameTok.start,
+                nameEnd: nameTok.end,
                 returnType: typeTok.value,
                 parameters: params,
-                locals,
+                locals: locals,
                 modifiers: mods,
                 start: typeTok.start,
                 end: peek().end
@@ -286,7 +322,9 @@ export function parse(
         expect(';');
         return {
             kind: 'VarDecl',
-            name: nameTok,
+            name: nameTok.value,
+            nameStart: nameTok.start,
+            nameEnd: nameTok.end,
             type: typeTok.value,
             modifiers: mods,
             start: typeTok.start,
@@ -295,45 +333,11 @@ export function parse(
     }
 
     // support helpers
-    function expectIdentifier(): string {
+    function expectIdentifier(): Token {
         skipTrivia();
         const t = peek();
         if (t.kind !== TokenKind.Identifier) throwErr(t, 'identifier');
         next();
-        return t.value;
-    }
-
-    function scanLocals(): string[] {
-        const list: string[] = [];
-        let depth = 1;
-        while (depth > 0 && !eof()) {
-            const t = next();
-            if (t.value === '{') depth++;
-            else if (t.value === '}') depth--;
-            else if (
-                depth === 1 &&
-                t.kind === TokenKind.Identifier &&
-                peek().kind === TokenKind.Identifier
-            ) {
-                // pattern:  <type> <name>
-                const maybeName = peek();
-                if (
-                    toks[pos + 1] &&
-                    toks[pos + 1].value === ';'
-                ) {
-                    list.push(maybeName.value);
-                }
-            }
-        }
-        return list;
-    }
-
-    function consumeBalanced(open: string, close: string): void {
-        let depth = 1;
-        while (depth > 0 && !eof()) {
-            const t = next();
-            if (t.value === open) depth++;
-            else if (t.value === close) depth--;
-        }
+        return t;
     }
 }

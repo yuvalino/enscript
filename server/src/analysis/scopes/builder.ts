@@ -1,7 +1,7 @@
-import { FileNode, NodeBase } from '../ast/nodes';
+import { File, NodeBase } from '../ast/parser';
 import { Scope, SymbolEntry } from './scope';
 
-export function buildScopes(ast: FileNode, uri: string): Scope {
+export function buildScopes(ast: File, uri: string): Scope {
   const global = new Scope('global');
 
   function visit(node: NodeBase, scope: Scope) {
