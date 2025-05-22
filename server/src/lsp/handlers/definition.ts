@@ -18,7 +18,7 @@ export function registerDefinition(conn: Connection, docs: TextDocuments<TextDoc
         if (symbols.length === 0) return [];
 
         const locations: Location[] = symbols.map(symbol => ({
-            uri: doc.uri,
+            uri: symbol.uri,
             range: {
                 start: symbol.nameStart,
                 end:symbol.nameEnd,

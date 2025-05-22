@@ -187,7 +187,6 @@ export class Analyzer {
     }
 
     resolveDefinitions(doc: TextDocument, _pos: Position): SymbolNodeBase[] {
-        const ast = this.ensure(doc);
         const offset = doc.offsetAt(_pos);
 
         const token = getTokenAtPosition(doc.getText(), offset);
@@ -198,17 +197,20 @@ export class Analyzer {
 
         const matches: SymbolNodeBase[] = [];
 
-        for (const node of ast.body) {
-            // top-level match
-            if ('name' in node && node.name === name) {
-                matches.push(node as SymbolNodeBase);
-            }
+        // iterate all loaded documents
+        for (const [uri, ast] of this.docCache) {
+            for (const node of ast.body) {
+                // top-level match
+                if (node.name === name) {
+                    matches.push(node as SymbolNodeBase);
+                }
 
-            // class member match
-            if (node.kind === 'ClassDecl') {
-                for (const member of (node as ClassDeclNode).members || []) {
-                    if ('name' in member && member.name === name) {
-                        matches.push(member as SymbolNodeBase);
+                // class member match
+                if (node.kind === 'ClassDecl') {
+                    for (const member of (node as ClassDeclNode).members) {
+                        if (member.name === name) {
+                            matches.push(member as SymbolNodeBase);
+                        }
                     }
                 }
             }
