@@ -64,7 +64,6 @@ export function lex(text: string): Token[] {
         if (/\d/.test(ch)) {
             while (i < text.length && /[0-9.eE+-]/.test(text[i])) i++;
             push(TokenKind.Number, text.slice(start, i), start);
-            console.info(`num ${text.slice(start, i)}`);
             continue;
         }
 
