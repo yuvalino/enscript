@@ -31,8 +31,8 @@ export class ParseError extends Error {
     }
 }
 
-/* ─────────────────────── config tables ──────────────────────────── */
-const modifiers = new Set(['proto', 'native', 'modded', 'owned', 'ref']);
+// config tables
+const modifiers = new Set(['override', 'proto', 'native', 'modded', 'owned', 'ref', 'public', 'private', 'protected', 'static', 'const']);
 const primitives = new Set([
     'void',
     'bool',
@@ -63,6 +63,7 @@ export interface SymbolNodeBase extends NodeBase {
     name: string;
     nameStart: Position;
     nameEnd: Position;
+    annotations: string[][];
     modifiers: string[];
 }
 
@@ -195,9 +196,17 @@ export function parse(
     function parseDecl(doc: TextDocument, depth: number): SymbolNodeBase | null {
         skipTrivia();
 
-        // modifiers are allowed on functions, variables, class members
+        // annotations and modifiers are allowed on functions, variables, class members
+        const annotations: string[][] = [];
+        while (peek().value === '[') {
+            const ano = expectAnnotation();
+            annotations.push(ano);
+        }
+
         const mods: string[] = [];
-        while (isModifier(peek())) mods.push(next().value);
+        while (isModifier(peek())) {
+            mods.push(next().value);
+        }
 
         const t = peek();
 
@@ -226,6 +235,7 @@ export function parse(
                 nameStart: doc.positionAt(nameTok.start),
                 nameEnd: doc.positionAt(nameTok.end),
                 base: base,
+                annotations: annotations,
                 modifiers: mods,
                 members: members,
                 start: doc.positionAt(t.start),
@@ -253,6 +263,8 @@ export function parse(
                 nameStart: doc.positionAt(nameTok.start),
                 nameEnd: doc.positionAt(nameTok.end),
                 members: enumerators,
+                annotations: annotations,
+                modifiers: mods,
                 start: doc.positionAt(t.start),
                 end: doc.positionAt(peek().end)
             } as EnumDeclNode;
@@ -269,6 +281,8 @@ export function parse(
                 uri: doc.uri,
                 oldType: oldTy,
                 name: nameTok.value,
+                annotations: annotations,
+                modifiers: mods,
                 nameStart: doc.positionAt(nameTok.start),
                 nameEnd: doc.positionAt(nameTok.end),
                 start: doc.positionAt(t.start),
@@ -320,6 +334,7 @@ export function parse(
                 returnType: typeTok.value,
                 parameters: params,
                 locals: locals,
+                annotations: annotations,
                 modifiers: mods,
                 start: doc.positionAt(typeTok.start),
                 end: doc.positionAt(peek().end)
@@ -335,6 +350,7 @@ export function parse(
             nameStart: doc.positionAt(nameTok.start),
             nameEnd: doc.positionAt(nameTok.end),
             type: typeTok.value,
+            annotations: annotations,
             modifiers: mods,
             start: doc.positionAt(typeTok.start),
             end: doc.positionAt(peek().end)
@@ -348,5 +364,29 @@ export function parse(
         if (t.kind !== TokenKind.Identifier) throwErr(t, 'identifier');
         next();
         return t;
+    }
+
+    function expectAnnotation(): string[] {
+        const startTok = expect('[');
+
+        const args: string[] = [expectIdentifier().value];
+
+        if (peek().value === '(') {
+            expect('(');
+            while (peek().value !== ')') {
+                if (peek().kind === TokenKind.String || peek().kind === TokenKind.Number) {
+                    args.push(next().value);
+                } else {
+                    next(); // skip unexpected stuff
+                }
+
+                if (peek().value === ',') next();
+            }
+            expect(')');
+        }
+
+        const endTok = expect(']');
+
+        return args;
     }
 }
