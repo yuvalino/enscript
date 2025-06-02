@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range, Location, SymbolInformation, SymbolKind, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind } from '../ast/parser';
+import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind, EnumDeclNode } from '../ast/parser';
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
@@ -254,6 +254,19 @@ export class Analyzer {
 
             if (node.kind === "ClassDecl") {
                 res.push(...this.getInnerWorkspaceSymbols(uri, query, (node as ClassDeclNode).members, node.name));
+            }
+
+            if (node.kind === "EnumDecl") {
+                for (const enumerator of (node as EnumDeclNode).members) {
+                    if (enumerator.name.includes(query)) {
+                        res.push({
+                            name: enumerator.name,
+                            kind: SymbolKind.EnumMember,
+                            containerName: node.name,
+                            location: { uri, range: { start: enumerator.nameStart, end: enumerator.nameEnd } }
+                        })
+                    }
+                }
             }
         }
         return res

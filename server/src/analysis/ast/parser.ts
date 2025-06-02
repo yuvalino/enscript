@@ -44,6 +44,7 @@ export type NodeKind =
     | 'Type'
     | 'ClassDecl'
     | 'EnumDecl'
+    | 'EnumMemberDecl'
     | 'Typedef'
     | 'FunctionDecl'
     | 'VarDecl';
@@ -95,10 +96,14 @@ export interface ClassDeclNode extends SymbolNodeBase {
     members: SymbolNodeBase[];
 }
 
+export interface EnumMemberDeclNode extends SymbolNodeBase {
+    kind: 'EnumMemberDecl';
+}
+
 export interface EnumDeclNode extends SymbolNodeBase {
     kind: 'EnumDecl';
     base?: string;
-    members: string[];
+    members: EnumMemberDeclNode[];
 }
 
 export interface TypedefNode extends SymbolNodeBase {
@@ -310,10 +315,20 @@ export function parse(
                 base = expectIdentifier().value;
             }
             expect('{');
-            const enumerators: string[] = [];
+            const enumerators: EnumMemberDeclNode[] = [];
             while (peek().value !== '}' && !eof()) {
-                if (peek().kind === TokenKind.Identifier)
-                    enumerators.push(next().value);
+                if (peek().kind === TokenKind.Identifier) {
+                    const enumMemberNameTok = next();
+                    enumerators.push({
+                        kind: 'EnumMemberDecl',
+                        uri: doc.uri,
+                        name: enumMemberNameTok.value,
+                        nameStart: doc.positionAt(enumMemberNameTok.start),
+                        nameEnd: doc.positionAt(enumMemberNameTok.end),
+                        start: doc.positionAt(enumMemberNameTok.start),
+                        end: doc.positionAt(enumMemberNameTok.end),
+                    } as EnumMemberDeclNode);
+                }
                 else next();
             }
             expect('}');
