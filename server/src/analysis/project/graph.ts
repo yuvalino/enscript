@@ -4,6 +4,7 @@ import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNod
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
+import { normalizeUri } from '../../util/uri';
 import * as url from 'node:url';
 
 interface SymbolEntry {
@@ -98,7 +99,7 @@ export class Analyzer {
     private ensure(doc: TextDocument): File {
         // 1 · cache hit
         const currVersion = doc.version;
-        const cachedFile = this.docCache.get(doc.uri);
+        const cachedFile = this.docCache.get(normalizeUri(doc.uri));
 
         if (cachedFile && cachedFile.version === currVersion) {
             return cachedFile;
@@ -107,7 +108,7 @@ export class Analyzer {
         try {
             // 2 · happy path ─ parse & cache
             const ast = parse(doc);           // pass full TextDocument
-            this.docCache.set(doc.uri, ast);
+            this.docCache.set(normalizeUri(doc.uri), ast);
             return ast;
         } catch (err) {
             // 3 · graceful error handling
