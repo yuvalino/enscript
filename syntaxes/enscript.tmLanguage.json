@@ -611,7 +611,7 @@
 		},
 		"storage-modifier": {
 			"name": "storage.modifier.$1.cs",
-			"match": "(?<!\\.)\\b(new|public|protected|internal|private|abstract|event|virtual|proto|native|override|sealed|static|partial|readonly|volatile|const|extern|async|unsafe|ref|required|file)\\b"
+			"match": "(?<!\\.)\\b(proto|owned|new|public|protected|internal|private|modded|local|notnull|abstract|event|virtual|native|override|sealed|static|partial|readonly|volatile|const|extern|external|async|unsafe|ref|required|file|autoptr)\\b"
 		},
 		"class-declaration": {
 			"begin": "(?=(\\brecord\\b\\s+)?\\bclass\\b)",
@@ -1018,25 +1018,28 @@
 			]
 		},
 		"base-types": {
-			"begin": ":",
-			"beginCaptures": {
-				"0": {
-					"name": "punctuation.separator.colon.cs"
-				}
-			},
-			"end": "(?=\\{|where|;)",
-			"patterns": [
-				{
-					"include": "#type"
-				},
-				{
-					"include": "#punctuation-comma"
-				},
-				{
-					"include": "#preprocessor"
-				}
-			]
-		},
+            "begin": "(?i)\\b(extends)\\b|(:)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.other.extends.cs"
+                },
+                "2": {
+                    "name": "punctuation.separator.colon.cs"
+                }
+            },
+            "end": "(?=\\{|where|;)",
+            "patterns": [
+                {
+                    "include": "#type"
+                },
+                {
+                    "include": "#punctuation-comma"
+                },
+                {
+                    "include": "#preprocessor"
+                }
+            ]
+        },
 		"generic-constraints": {
 			"begin": "(where)\\s+(@?[_[:alpha:]][_[:alnum:]]*)\\s*(:)",
 			"beginCaptures": {
