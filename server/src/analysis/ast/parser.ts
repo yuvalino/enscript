@@ -35,14 +35,6 @@ export class ParseError extends Error {
 
 // config tables
 const modifiers = new Set(['override', 'proto', 'native', 'modded', 'owned', 'ref', 'reference', 'public', 'private', 'protected', 'static', 'const', 'out', 'inout', 'notnull', 'external', 'volatile', 'local', 'autoptr', 'event']);
-const primitives = new Set([
-    'void',
-    'bool',
-    'int',
-    'float',
-    'string',
-    'vector'
-]);
 
 const isModifier = (t: Token) =>
     t.kind === TokenKind.Keyword && modifiers.has(t.value);
@@ -65,7 +57,7 @@ export interface NodeBase {
 export interface TypeNode extends NodeBase {
     identifier: string;
     genericArgs?: TypeNode[]; // undefined - not generic, 0 no types
-    arrayDims: (number | undefined)[]; // T - arrayDims=[], T[3] - arrayDims=[3], T[3][2] - arrayDims=[3, 2], T[] = arrayDims[undefined], T[4][] - arrayDims[4, undefined]
+    arrayDims: (number | string | undefined)[]; // T - arrayDims=[], T[3] - arrayDims=[3], T[3][2] - arrayDims=[3, 2], T[] = arrayDims[undefined], T[4][] - arrayDims[4, undefined]
     modifiers: string[];
 }
 
@@ -157,10 +149,7 @@ export function parse(
     /* read & return one identifier or keyword token */
     const readTypeLike = (): Token => {
         const t = peek();
-        if (
-            t.kind === TokenKind.Identifier ||
-            (t.kind === TokenKind.Keyword && primitives.has(t.value))
-        )
+        if (t.kind === TokenKind.Identifier)
             return next();
         return throwErr(t, 'type identifier');
     };
@@ -199,6 +188,12 @@ export function parse(
     // main loop
     while (!eof()) {
         if (eof()) break;
+
+        // skip semicolons
+        if (peek().value === ';') {
+            next();
+            continue;
+        }
 
         const node = parseDecl(doc, 0); // depth = 0
         if (node) file.body.push(node);
@@ -245,11 +240,15 @@ export function parse(
             expect('{');
             const members: SymbolNodeBase[] = [];
             while (peek().value !== '}' && !eof()) {
+                // skip semicolons
+                if (peek().value === ';') {
+                    next();
+                    continue;
+                }
                 const m = parseDecl(doc, depth + 1);
                 if (m) members.push(m);
             }
             expect('}');
-            if (peek().value === ';') next(); // optional
 
             return {
                 kind: 'ClassDecl',
@@ -278,7 +277,7 @@ export function parse(
                 else next();
             }
             expect('}');
-            if (peek().value === ';') next();
+
             return {
                 kind: 'EnumDecl',
                 uri: doc.uri,
@@ -298,7 +297,7 @@ export function parse(
             next();
             const oldType = parseType(doc);
             const nameTok = expectIdentifier();
-            if (peek().value === ';') next();
+
             return {
                 kind: 'Typedef',
                 uri: doc.uri,
@@ -343,8 +342,6 @@ export function parse(
                     //     }
                     // }
                 }
-            } else {
-                expect(';');
             }
 
             return {
@@ -391,8 +388,6 @@ export function parse(
                 }
             }
         }
-
-        if (!inline) expect(';');
 
         return {
             kind: 'VarDecl',
@@ -457,7 +452,7 @@ export function parse(
         if (peek().value === '[') {
 
             // Prevent additional [] after identifier if already declared in type
-            if (typeNode.arrayDims.length != 0) {
+            if (typeNode.arrayDims.length !== 0) {
                 throwErr(peek(), "not another [");
             }
 
@@ -474,10 +469,13 @@ export function parse(
         // array: T[3], T[]
         while (peek().value === '[') {
             next(); // [
-            let size: number | undefined = undefined;
+            let size: number | string | undefined = undefined;
 
             if (peek().kind === TokenKind.Number) {
                 size = parseInt(next().value);
+            }
+            else if (peek().kind === TokenKind.Identifier) {
+                size = next().value;
             }
 
             const endTok = expect(']');
