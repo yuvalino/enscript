@@ -39,7 +39,11 @@
         "commands": [
             {
                 "command": "enscript.restartServer",
-                "title": "Restart Enscript Language Server"
+                "title": "Enscript: Restart Language Server"
+            },
+            {
+                "command": "enscript.dumpDiagnostics",
+                "title": "Enscript: Dump Diagnostics"
             }
         ]
     },

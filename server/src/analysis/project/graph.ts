@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range, Location, SymbolInformation, SymbolKind, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind, EnumDeclNode, EnumMemberDeclNode } from '../ast/parser';
+import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind, EnumDeclNode, EnumMemberDeclNode, TypeNode } from '../ast/parser';
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
@@ -310,4 +310,117 @@ export class Analyzer {
         }
         return diags;
     }
+
+    private toSymbolKindName(kind: string): SymbolEntry['kind'] {
+        switch (kind) {
+            case 'ClassDecl': return 'class';
+            case 'FunctionDecl': return 'function';
+            case 'VarDecl': return 'variable';
+            case 'Typedef': return 'typedef';
+            case 'EnumDecl': return 'enum';
+            case 'EnumMemberDecl': return 'field';
+            default: return 'variable';
+        }
+    }
+
+    private dumpType(type: TypeNode): any {
+        return {
+            identifier: type.identifier,
+            modifiers: type.modifiers,
+            arrayDims: type.arrayDims,
+            genericArgs: type.genericArgs?.map(this.dumpType) ?? []
+        };
+    }
+
+
+    private dumpNode(node: SymbolNodeBase): any | null {
+        if (!node.name) return null;
+
+        const base = {
+            type: this.toSymbolKindName(node.kind),
+            name: node.name,
+            modifiers: node.modifiers,
+            location: {
+                range: { start: node.start, end: node.end },
+                nameRange: { start: node.nameStart, end: node.nameEnd }
+            }
+        };
+
+        switch (node.kind) {
+            case 'ClassDecl': {
+                const c = node as ClassDeclNode;
+                return {
+                    ...base,
+                    base: c.base ? this.dumpType(c.base) : undefined,
+                    members: c.members.map(m => this.dumpNode(m)).filter(Boolean)
+                };
+            }
+
+            case 'EnumDecl': {
+                const e = node as EnumDeclNode;
+                return {
+                    ...base,
+                    baseType: e.base,
+                    members: e.members.map(this.dumpNode.bind(this))
+                };
+            }
+
+            case 'FunctionDecl': {
+                const f = node as FunctionDeclNode;
+                return {
+                    ...base,
+                    returnType: this.dumpType(f.returnType),
+                    parameters: f.parameters.map(p => ({
+                        name: p.name,
+                        type: this.dumpType(p.type)
+                    })),
+                    locals: f.locals.map(l => ({
+                        name: l.name,
+                        type: this.dumpType(l.type)
+                    }))
+                };
+            }
+
+            case 'Typedef': {
+                const t = node as TypedefNode;
+                return {
+                    ...base,
+                    type: this.dumpType(t.oldType)
+                };
+            }
+
+            case 'VarDecl': {
+                const v = node as VarDeclNode;
+                return {
+                    ...base,
+                    type: this.dumpType(v.type)
+                };
+            }
+
+            case 'EnumMemberDecl': {
+                return base;
+            }
+
+            default:
+                return base;
+        }
+    }
+
+
+    dumpDiagnostics(): Record<string, any[]> {
+        const output: Record<string, any[]> = {};
+
+        for (const [uri, file] of this.docCache) {
+            const items: any[] = [];
+
+            for (const node of file.body) {
+                items.push(node);
+            }
+
+            output[uri] = items;
+        }
+
+        return output;
+    }
+
 }

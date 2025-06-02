@@ -8,6 +8,7 @@ import { registerRename } from './handlers/rename';
 import { registerWorkspaceSymbol } from './handlers/workspaceSymbol';
 import { registerDiagnostics } from './handlers/diagnostics';
 import { registerDocuments } from './handlers/documents';
+import { registerDumpDiagnostics } from './handlers/dumpDiagnostics';
 
 export function registerAllHandlers(conn: Connection, docs: TextDocuments<TextDocument>): void {
     registerCompletion(conn, docs);
@@ -18,4 +19,5 @@ export function registerAllHandlers(conn: Connection, docs: TextDocuments<TextDo
     registerWorkspaceSymbol(conn, docs);
     registerDiagnostics(conn, docs);
     registerDocuments(conn, docs);
+    registerDumpDiagnostics(conn, docs);
 }
