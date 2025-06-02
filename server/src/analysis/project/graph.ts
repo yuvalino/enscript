@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range, Location, SymbolInformation, SymbolKind, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind, EnumDeclNode } from '../ast/parser';
+import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind, EnumDeclNode, EnumMemberDeclNode } from '../ast/parser';
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
@@ -51,31 +51,37 @@ function formatDeclaration(node: SymbolNodeBase): string {
     switch (node.kind) {
         case 'FunctionDecl': {
             const _node = node as FunctionDeclNode;
-            fmt = `${_node.returnType} ${_node.name}(${_node.parameters?.join(', ') ?? ''})`;
+            fmt = `${(_node.modifiers.length ? _node.modifiers.join(' ') + ' ': '')}${_node.returnType.identifier} ${_node.name}(${_node.parameters?.map(p => (p.modifiers.length ? p.modifiers.join(' ') + ' ': '') + p.type.identifier + ' ' + p.name).join(', ') ?? ''})`;
             break;
         }
 
         case 'VarDecl': {
             const _node = node as VarDeclNode;
-            fmt = `${_node.type} ${_node.name}`;
+            fmt = `${(_node.modifiers.length ? _node.modifiers.join(' ') + ' ': '')}${_node.type.identifier} ${_node.name}`;
             break;
         }
 
         case 'ClassDecl': {
             const _node = node as ClassDeclNode;
-            fmt = `class ${_node.name}` + (_node.base ? ` : ${_node.base}` : '');
+            fmt = `${(_node.modifiers.length ? _node.modifiers.join(' ') + ' ': '')}class ${_node.name}` + (_node.base?.identifier ? ` : ${_node.base.identifier}` : '');
             break;
         }
 
         case 'EnumDecl': {
             const _node = node as ClassDeclNode;
-            fmt = `enum ${_node.name}`;
+            fmt = `${(_node.modifiers.length ? _node.modifiers.join(' ') + ' ': '')}enum ${_node.name}`;
+            break;
+        }
+
+        case 'EnumMemberDecl': {
+            const _node = node as EnumMemberDeclNode;
+            fmt = `${_node.name}`;
             break;
         }
 
         case 'Typedef': {
             const _node = node as TypedefNode;
-            fmt = `typedef ${_node.oldType} ${_node.name}`;
+            fmt = `typedef ${_node.oldType.identifier} ${_node.name}`;
             break;
         }
     }
