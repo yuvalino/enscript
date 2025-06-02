@@ -213,6 +213,15 @@ export class Analyzer {
                         }
                     }
                 }
+
+                // enum member match
+                if (node.kind === 'EnumDecl') {
+                    for (const member of (node as EnumDeclNode).members) {
+                        if (member.name === name) {
+                            matches.push(member as SymbolNodeBase);
+                        }
+                    }
+                }
             }
         }
 
