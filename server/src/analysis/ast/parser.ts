@@ -339,7 +339,6 @@ export function parse(
 
         if (peek().value === '(') {
             const params = fastParamScan(doc);
-            //let locals: string[] = [];
 
             /* body? */
             if (peek().value === '{') {
@@ -349,20 +348,6 @@ export function parse(
                     const t = next();
                     if (t.value === '{') depth++;
                     else if (t.value === '}') depth--;
-                    // else if (
-                    //     depth === 1 &&
-                    //     t.kind === TokenKind.Identifier &&
-                    //     peek().kind === TokenKind.Identifier
-                    // ) {
-                    //     // pattern:  <type> <name>
-                    //     const maybeName = peek();
-                    //     if (
-                    //         toks[pos + 1] &&
-                    //         toks[pos + 1].value === ';'
-                    //     ) {
-                    //         locals.push(maybeName.value);
-                    //     }
-                    // }
                 }
             }
 
