@@ -16,6 +16,7 @@ import {
     Diagnostic,
     DiagnosticSeverity
 } from 'vscode-languageserver';
+import { SymbolKind } from 'vscode-languageserver-types';
 import { Token, TokenKind } from '../lexer/token';
 import { lex } from '../lexer/lexer';
 import * as url from 'node:url';
@@ -46,6 +47,24 @@ export type NodeKind =
     | 'Typedef'
     | 'FunctionDecl'
     | 'VarDecl';
+
+export function toSymbolKind(kind: NodeKind): SymbolKind {
+    switch (kind) {
+        case 'ClassDecl':
+            return SymbolKind.Class;
+        case 'EnumDecl':
+            return SymbolKind.Enum;
+        case 'FunctionDecl':
+            return SymbolKind.Function;
+        case 'VarDecl':
+            return SymbolKind.Variable;
+        case 'Type':
+        case 'Typedef':
+            return SymbolKind.TypeParameter;
+        default:
+            return SymbolKind.Object; // Fallback
+    }
+}
 
 export interface NodeBase {
     kind: NodeKind;

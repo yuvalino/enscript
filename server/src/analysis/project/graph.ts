@@ -1,6 +1,6 @@
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { Position, Range, Location, SymbolInformation, SymbolKind, Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode } from '../ast/parser';
+import { parse, ParseError, ClassDeclNode, File, SymbolNodeBase, FunctionDeclNode, VarDeclNode, TypedefNode, toSymbolKind } from '../ast/parser';
 import { prettyPrint } from '../ast/printer';
 import { lex } from '../lexer/lexer';
 import { Token, TokenKind } from '../lexer/token';
@@ -240,17 +240,29 @@ export class Analyzer {
         return [] as { uri: string; range: Range }[];
     }
 
-    getWorkspaceSymbols(): SymbolInformation[] {
+    getInnerWorkspaceSymbols(uri: string, query: string, members: SymbolNodeBase[], containerName?: string): SymbolInformation[] {
         const res: SymbolInformation[] = [];
-        for (const [uri, ast] of this.docCache) {
-            for (const node of ast.body) {
-                if (!node.name) continue;
+        for (const node of members) {
+            if (node.name.includes(query)) {
                 res.push({
                     name: node.name,
-                    kind: SymbolKind.Class,
+                    kind: toSymbolKind(node.kind),
+                    containerName: containerName,
                     location: { uri, range: { start: node.nameStart, end: node.nameEnd } }
                 });
             }
+
+            if (node.kind === "ClassDecl") {
+                res.push(...this.getInnerWorkspaceSymbols(uri, query, (node as ClassDeclNode).members, node.name));
+            }
+        }
+        return res
+    }
+
+    getWorkspaceSymbols(query: string): SymbolInformation[] {
+        const res: SymbolInformation[] = [];
+        for (const [uri, ast] of this.docCache) {
+            res.push(...this.getInnerWorkspaceSymbols(uri, query, ast.body, undefined));
         }
         return res;
     }

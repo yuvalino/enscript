@@ -5,6 +5,6 @@ import { Analyzer } from '../../analysis/project/graph';
 export function registerWorkspaceSymbol(conn: Connection, _docs: TextDocuments<TextDocument>): void {
     conn.onWorkspaceSymbol((_params: WorkspaceSymbolParams): SymbolInformation[] => {
         const analyser = Analyzer.instance();
-        return analyser.getWorkspaceSymbols();
+        return analyser.getWorkspaceSymbols(_params.query);
     });
 }
