@@ -197,8 +197,8 @@ export function parse(
             continue;
         }
 
-        const node = parseDecl(doc, 0); // depth = 0
-        if (node) file.body.push(node);
+        const nodes = parseDecl(doc, 0); // depth = 0
+        file.body.push(...nodes);
     }
 
     /* pretty-log for debugging */
@@ -214,7 +214,7 @@ export function parse(
     return file;
 
     // declaration parser (recursive)
-    function parseDecl(doc: TextDocument, depth: number, inline: boolean = false): SymbolNodeBase | null {
+    function parseDecl(doc: TextDocument, depth: number, inline: boolean = false): SymbolNodeBase[] {
 
         // annotations and modifiers are allowed on functions, variables, class members
         const annotations: string[][] = [];
@@ -262,11 +262,11 @@ export function parse(
                     continue;
                 }
                 const m = parseDecl(doc, depth + 1);
-                if (m) members.push(m);
+                members.push(...m);
             }
             expect('}');
 
-            return {
+            return [{
                 kind: 'ClassDecl',
                 uri: doc.uri,
                 name: nameTok.value,
@@ -278,7 +278,7 @@ export function parse(
                 members: members,
                 start: doc.positionAt(t.start),
                 end: doc.positionAt(peek().end)
-            } as ClassDeclNode;
+            } as ClassDeclNode];
         }
 
         // enum
@@ -299,7 +299,7 @@ export function parse(
             }
             expect('}');
 
-            return {
+            return [{
                 kind: 'EnumDecl',
                 uri: doc.uri,
                 name: nameTok.value,
@@ -311,7 +311,7 @@ export function parse(
                 modifiers: mods,
                 start: doc.positionAt(t.start),
                 end: doc.positionAt(peek().end)
-            } as EnumDeclNode;
+            } as EnumDeclNode];
         }
 
         // typedef
@@ -320,7 +320,7 @@ export function parse(
             const oldType = parseType(doc);
             const nameTok = expectIdentifier();
 
-            return {
+            return [{
                 kind: 'Typedef',
                 uri: doc.uri,
                 oldType: oldType,
@@ -331,11 +331,12 @@ export function parse(
                 nameEnd: doc.positionAt(nameTok.end),
                 start: doc.positionAt(t.start),
                 end: doc.positionAt(peek().end)
-            } as TypedefNode;
+            } as TypedefNode];
         }
 
         // function OR variable
-        const { type, name } = parseTypeAndName(doc);
+        const baseTypeNode = parseType(doc);
+        let nameTok = expectIdentifier();
 
         if (peek().value === '(') {
             const params = fastParamScan(doc);
@@ -351,63 +352,89 @@ export function parse(
                 }
             }
 
-            return {
+            return [{
                 kind: 'FunctionDecl',
                 uri: doc.uri,
-                name: name.value,
-                nameStart: doc.positionAt(name.start),
-                nameEnd: doc.positionAt(name.end),
-                returnType: type,
+                name: nameTok.value,
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
+                returnType: baseTypeNode,
                 parameters: params,
                 locals: [], //locals,
                 annotations: annotations,
                 modifiers: mods,
-                start: type.start,
+                start: baseTypeNode.start,
                 end: doc.positionAt(peek().end)
-            } as FunctionDeclNode;
+            } as FunctionDeclNode];
         }
 
         // variable
 
-        // value initialization (skip for now)
-        if (peek().value === '=') {
-            next();
+        const vars: VarDeclNode[] = [];
+        while (!eof()) {
+            const typeNode = structuredClone(baseTypeNode);
 
-            while ((inline && peek().value !== ',' && peek().value !== ')') ||
-                (!inline && peek().value !== ';')) {
-                const curTok = next();
-                if (curTok.value === '(' || curTok.value === '[' || curTok.value === '{' || curTok.value === '<') {
-                    // skip initializer expression
-                    let depth = 1;
-                    while (!eof() && depth > 0) {
-                        const val = peek().value;
-                        if (val === '(' || val === '[' || val === '{' || val === '<') depth++;
-                        if (val === ')' || val === ']' || val === '}' || val === '>') depth--;
+            // Support trailing `T name[]`
+            if (peek().value === '[') {
+
+                // Prevent additional [] after identifier if already declared in type
+                if (typeNode.arrayDims.length !== 0) {
+                    throwErr(peek(), "not another [");
+                }
+
+                parseArrayDims(doc, typeNode);
+            }
+
+            // value initialization (skip for now)
+            if (peek().value === '=') {
+                next();
+
+                while ((inline && peek().value !== ',' && peek().value !== ')') ||
+                    (!inline && peek().value !== ';' && peek().value !== ',')) {
+                    const curTok = next();
+                    if (curTok.value === '(' || curTok.value === '[' || curTok.value === '{' || curTok.value === '<') {
+                        // skip initializer expression
+                        let depth = 1;
+                        while (!eof() && depth > 0) {
+                            const val = peek().value;
+                            if (val === '(' || val === '[' || val === '{' || val === '<') depth++;
+                            if (val === ')' || val === ']' || val === '}' || val === '>') depth--;
+                            next();
+                        }
+                    }
+                    else if (curTok.value === '-' && peek().kind === TokenKind.Number) {
                         next();
                     }
-                }
-                else if (curTok.value === '-' && peek().kind === TokenKind.Number) {
-                    next();
-                }
-                else if (curTok.kind !== TokenKind.Keyword && curTok.kind !== TokenKind.Identifier && curTok.kind !== TokenKind.Number &&
-                    curTok.kind !== TokenKind.String && curTok.value !== '.' && curTok.value !== '+' && curTok.value !== '|') {
-                    throwErr(curTok, "initialization expression");
+                    else if (curTok.kind !== TokenKind.Keyword && curTok.kind !== TokenKind.Identifier && curTok.kind !== TokenKind.Number &&
+                        curTok.kind !== TokenKind.String && curTok.value !== '.' && curTok.value !== '+' && curTok.value !== '|') {
+                        throwErr(curTok, "initialization expression");
+                    }
                 }
             }
+
+            vars.push({
+                kind: 'VarDecl',
+                uri: doc.uri,
+                name: nameTok.value,
+                nameStart: doc.positionAt(nameTok.start),
+                nameEnd: doc.positionAt(nameTok.end),
+                type: baseTypeNode,
+                annotations: annotations,
+                modifiers: mods,
+                start: baseTypeNode.start,
+                end: doc.positionAt(peek().end)
+            } as VarDeclNode);
+
+            if (!inline && peek().value === ',') {
+                next();
+                nameTok = expectIdentifier();
+                continue;
+            }
+
+            break;
         }
 
-        return {
-            kind: 'VarDecl',
-            uri: doc.uri,
-            name: name.value,
-            nameStart: doc.positionAt(name.start),
-            nameEnd: doc.positionAt(name.end),
-            type: type,
-            annotations: annotations,
-            modifiers: mods,
-            start: type.start,
-            end: doc.positionAt(peek().end)
-        } as VarDeclNode;
+        return vars;
     }
 
     function parseType(doc: TextDocument): TypeNode {
@@ -493,10 +520,10 @@ export function parse(
 
     function expectVarDecl(doc: TextDocument, inline: boolean): VarDeclNode {
         const decl = parseDecl(doc, 0, inline);
-        if (!decl || decl.kind !== "VarDecl") {
-            throwErr(peek(), "variable declaration");
-        }
-        return decl as VarDeclNode;
+        if (!decl) throwErr(peek(), "no declaration");
+        if (decl.length !== 1) throwErr(peek(), `internal parser error (decl.length:${decl.length} != 1)`);
+        if (decl[0].kind !== "VarDecl") throwErr(peek(), `not a variable declaration ${decl[0].kind}`);
+        return decl[0] as VarDeclNode;
     }
 
     // support helpers
