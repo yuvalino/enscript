@@ -40,12 +40,12 @@ const isModifier = (t: Token) =>
     t.kind === TokenKind.Keyword && modifiers.has(t.value);
 
 export type NodeKind =
-  | 'Type'
-  | 'ClassDecl'
-  | 'EnumDecl'
-  | 'Typedef'
-  | 'FunctionDecl'
-  | 'VarDecl';
+    | 'Type'
+    | 'ClassDecl'
+    | 'EnumDecl'
+    | 'Typedef'
+    | 'FunctionDecl'
+    | 'VarDecl';
 
 export interface NodeBase {
     kind: NodeKind;
@@ -71,12 +71,14 @@ export interface SymbolNodeBase extends NodeBase {
 
 export interface ClassDeclNode extends SymbolNodeBase {
     kind: 'ClassDecl';
-    base?: string;
+    genericVars?: string[];
+    base?: TypeNode;
     members: SymbolNodeBase[];
 }
 
 export interface EnumDeclNode extends SymbolNodeBase {
     kind: 'EnumDecl';
+    base?: string;
     members: string[];
 }
 
@@ -115,7 +117,7 @@ export function parse(
         while (
             pos < toks.length &&
             (toks[pos].kind === TokenKind.Comment ||
-            toks[pos].kind === TokenKind.Preproc)
+                toks[pos].kind === TokenKind.Preproc)
         ) {
             pos++;
         }
@@ -163,14 +165,14 @@ export function parse(
             // ignore default values
             while (!eof() && peek().value !== ')' && peek().value !== ',')
                 next();
-            
+
             if (peek().value === ',') next();
-            
+
             list.push(varDecl);
         }
-        
+
         expect(')');
-        
+
         return list;
     };
 
@@ -232,10 +234,24 @@ export function parse(
         if (t.value === 'class') {
             next();
             const nameTok = expectIdentifier();
-            let base: string | undefined;
+            let genericVars: string[] | undefined;
+            // generic: Param<Class T1, Class T2>
+            if (peek().value === '<') {
+                next();
+                genericVars = [];
+
+                while (peek().value !== '>' && !eof()) {
+                    expect('Class');
+                    genericVars.push(expectIdentifier().value);
+                    if (peek().value === ',') next();
+                }
+
+                expect('>');
+            }
+            let base: TypeNode | undefined;
             if (peek().value === ':' || peek().value === 'extends') {
                 next();
-                base = expectIdentifier().value;
+                base = parseType(doc);
             }
             expect('{');
             const members: SymbolNodeBase[] = [];
@@ -269,6 +285,11 @@ export function parse(
         if (t.value === 'enum') {
             next();
             const nameTok = expectIdentifier();
+            let base: string | undefined;
+            if (peek().value === ':' || peek().value === 'extends') {
+                next();
+                base = expectIdentifier().value;
+            }
             expect('{');
             const enumerators: string[] = [];
             while (peek().value !== '}' && !eof()) {
@@ -284,6 +305,7 @@ export function parse(
                 name: nameTok.value,
                 nameStart: doc.positionAt(nameTok.start),
                 nameEnd: doc.positionAt(nameTok.end),
+                base: base,
                 members: enumerators,
                 annotations: annotations,
                 modifiers: mods,
@@ -367,7 +389,7 @@ export function parse(
             next();
 
             while ((inline && peek().value !== ',' && peek().value !== ')') ||
-                   (!inline && peek().value !== ';')) {
+                (!inline && peek().value !== ';')) {
                 const curTok = next();
                 if (curTok.value === '(' || curTok.value === '[' || curTok.value === '{' || curTok.value === '<') {
                     // skip initializer expression
@@ -383,7 +405,7 @@ export function parse(
                     next();
                 }
                 else if (curTok.kind !== TokenKind.Keyword && curTok.kind !== TokenKind.Identifier && curTok.kind !== TokenKind.Number &&
-                         curTok.kind !== TokenKind.String && curTok.value !== '.' && curTok.value !== '+' && curTok.value !== '|') {
+                    curTok.kind !== TokenKind.String && curTok.value !== '.' && curTok.value !== '+' && curTok.value !== '|') {
                     throwErr(curTok, "initialization expression");
                 }
             }
