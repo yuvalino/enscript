@@ -1,5 +1,7 @@
 # Enfusion Script
 
+[![Discord](https://img.shields.io/badge/Submit%20Feedback-7289DA?logo=discord&logoColor=white&label=&style=flat)](https://discord.gg/BVSeTgAgJw)
+
 Enfusion Script is an unofficial VSCode extension for DayZ modders that indexes enfusion-script and allows advanced IDE features such as syntax highlighting, jump to definition, etc.
 
 ## 🔧 Initial setup
