@@ -1,17 +1,15 @@
 {
-    "name": "enscript-lsp",
-    "displayName": "Enscript for DayZ",
+    "name": "enscript",
+    "displayName": "Enfusion Script",
     "description": "Enforce/Enscript language support and DayZ game‑specific tooling.",
     "version": "0.1.0",
-    "publisher": "yourname",
+    "publisher": "yuval",
+    "icon": "media/logo.png",
     "engines": {
         "vscode": "^1.90.0"
     },
     "categories": [
         "Programming Languages"
-    ],
-    "activationEvents": [
-        "onLanguage:enscript"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -47,7 +45,7 @@
             }
         ],
         "configuration": {
-            "title": "Enscript",
+            "title": "Enfusion Script",
             "properties": {
                 "enscript.includePaths": {
                     "type": "array",
