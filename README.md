@@ -14,6 +14,9 @@ Find your extracted scripts folder (usually `P:\scripts`) and add it to user set
 
 **Important:** Reload the window after saving!
 
+### (YouTube) VSCode Enfusion Script Quickstart Guide
+[![VSCode Enfusion Script Quickstart Guide](https://img.youtube.com/vi/uIuiJoe-B30/0.jpg)](https://www.youtube.com/watch?v=uIuiJoe-B30 "VSCode Enfusion Script Quickstart Guide")
+
 ## 🧩 Extension
 
 1. **Syntax Highlighting:** Syntax highlighting for EnScript language!

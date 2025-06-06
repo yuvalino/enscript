@@ -1,5 +1,5 @@
 {
-    "name": "enscript",
+    "name": "enfusion-script",
     "displayName": "Enfusion Script",
     "description": "Enforce/Enscript language support and DayZ game‑specific tooling.",
     "version": "0.1.0",
