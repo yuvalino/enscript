@@ -11,6 +11,10 @@
     "categories": [
         "Programming Languages"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yuvalino/enscript"
+    },
     "main": "./out/extension.js",
     "contributes": {
         "languages": [
@@ -76,7 +80,7 @@
     "devDependencies": {
         "@types/jest": "^29.5.14",
         "@types/node": "^22.15.18",
-        "@types/vscode": "^1.100.0",
+        "@types/vscode": "^1.90.0",
         "jest": "^29.7.0",
         "rimraf": "^5.0.5",
         "ts-jest": "^29.3.4",
