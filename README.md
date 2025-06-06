@@ -8,7 +8,7 @@ The extension works out of the box for the opened project, but additional setup 
 
 Find your extracted scripts folder (usually `P:\scripts`) and add it to user settings:
 
-![settings](media/settings.jpg)
+![settings](https://raw.githubusercontent.com/yuvalino/enscript/refs/heads/main/media/settings.jpg)
 
 **Important:** Reload the window after saving!
 
@@ -16,12 +16,12 @@ Find your extracted scripts folder (usually `P:\scripts`) and add it to user set
 
 1. **Syntax Highlighting:** Syntax highlighting for EnScript language!
 
-![syntax](media/syntax.jpg)
+![syntax](https://raw.githubusercontent.com/yuvalino/enscript/refs/heads/main/media/syntax.jpg)
 
 2. **Hover & Jump to Definition:** Indexed symbols have their own hover and may be Ctrl+Click'ed to jump to definition.
 
-![definition.gif](media/definition.gif)
+![definition.gif](https://raw.githubusercontent.com/yuvalino/enscript/refs/heads/main/media/definition.gif)
 
 3. **Workspace Symbols**: Supports convenient symbol definition search.
 
-![definition.gif](media/workspaceSymbols.gif)
+![definition.gif](https://raw.githubusercontent.com/yuvalino/enscript/refs/heads/main/media/workspaceSymbols.gif)
