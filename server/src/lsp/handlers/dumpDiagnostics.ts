@@ -1,10 +1,5 @@
 import {
     Connection,
-    PrepareRenameParams,
-    Range,
-    RenameParams,
-    TextEdit,
-    WorkspaceEdit,
     TextDocuments
 } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';

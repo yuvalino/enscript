@@ -22,8 +22,12 @@ export async function activate(context: vscode.ExtensionContext) {
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ language: 'enscript' }],
         synchronize: {
-            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.c')
-        }
+            configurationSection: 'enscript',
+            fileEvents: vscode.workspace.createFileSystemWatcher('**/*.c'),
+        },
+        initializationOptions: {
+            includePaths: vscode.workspace.getConfiguration('enscript').get<string[]>('includePaths') || []
+        },
     };
 
     client = new LanguageClient(

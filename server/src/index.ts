@@ -4,7 +4,8 @@ import {
     TextDocumentSyncKind,
     ProposedFeatures,
     InitializeParams,
-    InitializeResult
+    InitializeResult,
+    ConfigurationItem
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { registerAllHandlers } from './lsp/registerAll';
@@ -12,6 +13,7 @@ import * as url from 'node:url';
 import * as fs from 'fs/promises';
 import { findAllFiles, readFileUtf8 } from './util/fs';
 import { Analyzer } from './analysis/project/graph';
+import { getConfiguration } from './util/config';
 
 
 // Create LSP connection (stdio or Node IPC autodetect).
@@ -44,10 +46,25 @@ connection.onInitialize((_params: InitializeParams): InitializeResult => {
 });
 
 connection.onInitialized(async () => {
-    const files = await findAllFiles(workspaceRoot, ['.c']);
-    console.log(`Indexing ${files.length} EnScript files...`);
+    const config = await getConfiguration(connection);
+    const includePaths = config.includePaths as string[] || [];
 
-    for (const filePath of files) {
+    const pathsToIndex = [workspaceRoot, ...includePaths];
+    const allFiles: string[] = [];
+
+    for (const basePath of pathsToIndex) {
+        console.log(`Adding folder ${basePath} to indexing`);
+        try {
+            const files = await findAllFiles(basePath, ['.c']);
+            allFiles.push(...files);
+        } catch (err) {
+            console.warn(`Failed to scan path: ${basePath} – ${String(err)}`);
+        }
+    }
+
+    console.log(`Indexing ${allFiles.length} EnScript files...`);
+
+    for (const filePath of allFiles) {
         const uri = url.pathToFileURL(filePath).toString();
         const text = await readFileUtf8(filePath);
         const doc = TextDocument.create(uri, 'enscript', 1, text);

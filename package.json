@@ -45,7 +45,20 @@
                 "command": "enscript.dumpDiagnostics",
                 "title": "Enscript: Dump Diagnostics"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Enscript",
+            "properties": {
+                "enscript.includePaths": {
+                    "type": "array",
+                    "default": [],
+                    "description": "List of paths to index for base game data (e.g. P:\\scripts\\ folder)",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
     },
     "scripts": {
         "compile": "tsc -p . && tsc -p server",
